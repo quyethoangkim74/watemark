@@ -9,6 +9,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <!-- Thư viện chỉnh sửa PDF trên trình duyệt -->
     <script src="https://unpkg.com/pdf-lib@1.4.0/dist/pdf-lib.min.js"></script>
+    <!-- Nhúng Google Fonts chuẩn xác cho Josefin Sans và Life Savers -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@400;700&family=Life+Savers:wght@400;700&family=Arial&display=swap" rel="stylesheet">
 </head>
 <body class="bg-gray-50 min-h-screen p-6">
     <div class="max-w-4xl mx-auto bg-white p-6 rounded-xl shadow-lg">
@@ -39,15 +43,11 @@
                         <label class="block text-sm font-medium text-gray-700">Font chữ:</label>
                         <select id="wmFont" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border bg-white">
                             <option value="Josefin Sans">Josefin Sans (Thanh mảnh, hiện đại, sang trọng)</option>
-                            <option value="Life Logo">Life Logo (Font ký hiệu/biểu tượng độc đáo)</option>
-                            <option value="Arial">Arial (Phổ biến, rõ ràng)</option>
-                            <option value="Roboto">Roboto (Chuẩn web hiện đại)</option>
-                            <option value="Open Sans">Open Sans (Thoáng, dễ đọc)</option>
-                            <option value="Montserrat">Montserrat (Dày dặn, cao cấp)</option>
-                            <option value="Times New Roman">Times New Roman (Cổ điển, trang trọng)</option>
-                            <option value="Georgia">Georgia (Chữ có chân mềm mại)</option>
+                            <option value="Life Savers">Life Savers (Kiểu chữ bo tròn thân thiện)</option>
+                            <option value="Arial">Arial (Tiêu chuẩn, rõ ràng)</option>
+                            <option value="Impact">Impact (Cực dày, bản to nổi bật)</option>
                             <option value="Courier New">Courier New (Kiểu đánh máy)</option>
-                            <option value="Impact">Impact (Cực đậm, nổi bật)</option>
+                            <option value="Georgia">Georgia (Chữ có chân mềm mại)</option>
                         </select>
                     </div>
 
@@ -260,34 +260,29 @@
             statusDiv.textContent = 'Hoàn tất! Đã tự động tải file ZIP về máy.';
         }
 
-        function getCoordinates(position, canvasWidth, canvasHeight, objWidth, objHeight, padding, customX, customY) {
-            let x = padding, y = padding;
-            if (position === 'bottom-center') {
-                x = (canvasWidth - objWidth) / 2;
-                y = canvasHeight - objHeight - padding;
-            } else if (position === 'bottom-right') {
-                x = canvasWidth - objWidth - padding;
-                y = canvasHeight - objHeight - padding;
-            } else if (position === 'bottom-left') {
-                x = padding;
-                y = canvasHeight - objHeight - padding;
-            } else if (position === 'top-right') {
-                x = canvasWidth - objWidth - padding;
-                y = padding;
-            } else if (position === 'top-left') {
-                x = padding;
-                y = padding;
-            } else if (position === 'center') {
-                x = (canvasWidth - objWidth) / 2;
-                y = (canvasHeight - objHeight) / 2;
-            } else if (position === 'custom') {
-                x = customX;
-                y = customY;
+        // Tải trước Google Font qua FontFace API để Canvas bắt chuẩn nét chữ
+        async function loadCustomFontForCanvas(fontName) {
+            const fontUrls = {
+                'Josefin Sans': 'https://fonts.gstatic.com/s/josefinsans/v32/Qw3PZQNVED7rKGKvnMQTjvqeehkuPlT7DdaVzHv0Bv8.woff2',
+                'Life Savers': 'https://fonts.gstatic.com/s/lifesavers/v17/kXEAonoxVIZtZ0uD3XQh3j8t8g.woff2'
+            };
+
+            if (fontUrls[fontName]) {
+                try {
+                    const fontFace = new FontFace(fontName, `url(${fontUrls[fontName]})`);
+                    await fontFace.load();
+                    document.fonts.add(fontFace);
+                } catch (e) {
+                    console.log("Không tải được font qua mạng, sử dụng font mặc định.");
+                }
             }
-            return { x, y };
         }
 
-        function addWatermarkToImage(file, config) {
+        async function addWatermarkToImage(file, config) {
+            if (config.type === 'text') {
+                await loadCustomFontForCanvas(config.font);
+            }
+
             return new Promise((resolve) => {
                 const reader = new FileReader();
                 reader.onload = function (e) {
@@ -304,7 +299,11 @@
                             ctx.globalAlpha = config.opacity;
                             const rgba = hexToRgba(config.colorHex);
                             ctx.fillStyle = `rgb(${rgba.r}, ${rgba.g}, ${rgba.b})`;
-                            ctx.font = `bold ${config.size}px "${config.font}", sans-serif`;
+                            ctx.font = `${config.size}px "${config.font}", sans-serif`;
+
+                            const textMetrics = ctx.measureText(config.text);
+                            const textWidth = textMetrics.width;
+                            const padding = 40;
 
                             if (config.position === 'tile') {
                                 ctx.save();
@@ -316,32 +315,48 @@
                                     }
                                 }
                                 ctx.restore();
-                            } else {
+                            } else if (config.angle !== 0) {
                                 ctx.save();
-                                const textMetrics = ctx.measureText(config.text);
-                                const textWidth = textMetrics.width;
-                                const textHeight = config.size;
+                                let cx = padding, cy = padding;
+                                if (config.position === 'bottom-center') { cx = (canvas.width - textWidth) / 2; cy = canvas.height - padding; }
+                                else if (config.position === 'bottom-right') { cx = canvas.width - textWidth - padding; cy = canvas.height - padding; }
+                                else if (config.position === 'bottom-left') { cx = padding; cy = canvas.height - padding; }
+                                else if (config.position === 'top-right') { cx = canvas.width - textWidth - padding; cy = padding + config.size; }
+                                else if (config.position === 'top-left') { cx = padding; cy = padding + config.size; }
+                                else if (config.position === 'center') { cx = (canvas.width - textWidth) / 2; cy = canvas.height / 2; }
+                                else if (config.position === 'custom') { cx = config.customX; cy = config.customY; }
 
-                                let pos = getCoordinates(config.position, canvas.width, canvas.height, textWidth, textHeight, 40, config.customX, config.customY);
-                                
-                                if (config.position === 'center') {
-                                    ctx.translate(canvas.width / 2, canvas.height / 2);
-                                    ctx.rotate((config.angle * Math.PI) / 180);
-                                    ctx.textAlign = 'center'; 
-                                    ctx.textBaseline = 'middle';
-                                    ctx.fillText(config.text, 0, 0);
-                                } else if (config.position === 'bottom-center') {
-                                    ctx.translate(pos.x + textWidth / 2, pos.y + textHeight / 2);
-                                    ctx.rotate((config.angle * Math.PI) / 180);
-                                    ctx.textAlign = 'center'; 
-                                    ctx.textBaseline = 'middle';
-                                    ctx.fillText(config.text, 0, 0);
-                                } else {
-                                    ctx.translate(pos.x, pos.y + textHeight);
-                                    ctx.rotate((config.angle * Math.PI) / 180);
-                                    ctx.fillText(config.text, 0, 0);
-                                }
+                                ctx.translate(cx + textWidth / 2, cy - config.size / 2);
+                                ctx.rotate((config.angle * Math.PI) / 180);
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'middle';
+                                ctx.fillText(config.text, 0, 0);
                                 ctx.restore();
+                            } else {
+                                let x = padding, y = padding + config.size;
+                                if (config.position === 'bottom-center') {
+                                    x = (canvas.width - textWidth) / 2;
+                                    y = canvas.height - padding;
+                                } else if (config.position === 'bottom-right') {
+                                    x = canvas.width - textWidth - padding;
+                                    y = canvas.height - padding;
+                                } else if (config.position === 'bottom-left') {
+                                    x = padding;
+                                    y = canvas.height - padding;
+                                } else if (config.position === 'top-right') {
+                                    x = canvas.width - textWidth - padding;
+                                    y = padding + config.size;
+                                } else if (config.position === 'top-left') {
+                                    x = padding;
+                                    y = padding + config.size;
+                                } else if (config.position === 'center') {
+                                    x = (canvas.width - textWidth) / 2;
+                                    y = (canvas.height / 2) + (config.size / 2);
+                                } else if (config.position === 'custom') {
+                                    x = config.customX;
+                                    y = config.customY;
+                                }
+                                ctx.fillText(config.text, x, y);
                             }
                         } else if (config.type === 'image' && config.logoImg) {
                             const logo = config.logoImg;
@@ -361,14 +376,21 @@
                                     }
                                 }
                             } else {
-                                let pos = getCoordinates(config.position, canvas.width, canvas.height, targetWidth, targetHeight, 40, config.customX, config.customY);
+                                let x = 40, y = 40, padding = 40;
+                                if (config.position === 'bottom-center') { x = (canvas.width - targetWidth) / 2; y = canvas.height - targetHeight - padding; }
+                                else if (config.position === 'bottom-right') { x = canvas.width - targetWidth - padding; y = canvas.height - targetHeight - padding; }
+                                else if (config.position === 'bottom-left') { x = padding; y = canvas.height - targetHeight - padding; }
+                                else if (config.position === 'top-right') { x = canvas.width - targetWidth - padding; y = padding; }
+                                else if (config.position === 'top-left') { x = padding; y = padding; }
+                                else if (config.position === 'center') { x = (canvas.width - targetWidth) / 2; y = (canvas.height - targetHeight) / 2; }
+                                else if (config.position === 'custom') { x = config.customX; y = config.customY; }
 
                                 if (config.angle !== 0) {
-                                    ctx.translate(pos.x + targetWidth / 2, pos.y + targetHeight / 2);
+                                    ctx.translate(x + targetWidth / 2, y + targetHeight / 2);
                                     ctx.rotate((config.angle * Math.PI) / 180);
                                     ctx.drawImage(logo, -targetWidth / 2, -targetHeight / 2, targetWidth, targetHeight);
                                 } else {
-                                    ctx.drawImage(logo, pos.x, pos.y, targetWidth, targetHeight);
+                                    ctx.drawImage(logo, x, y, targetWidth, targetHeight);
                                 }
                             }
                             ctx.restore();
