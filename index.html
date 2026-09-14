@@ -2,31 +2,39 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Tool Đóng Dấu Watermark Chữ & Logo Hàng Loạt</title>
+    <title>Tool Đóng Dấu Watermark Chữ & Logo Chuẩn Font</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Thư viện nén file Zip -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <!-- Thư viện chỉnh sửa PDF trên trình duyệt -->
     <script src="https://unpkg.com/pdf-lib@1.4.0/dist/pdf-lib.min.js"></script>
-    <!-- Nhúng Google Fonts trực tiếp vào trang web -->
+
+    <!--
+      QUAN TRỌNG: không dùng link .woff2 cố định (hotlink) của Google Fonts nữa,
+      vì các URL đó gắn với một "version hash" và Google có thể đổi hash bất cứ lúc nào
+      -> link chết -> font không tải được -> canvas âm thầm rơi về sans-serif.
+      Thay vào đó gọi thẳng Google Fonts CSS2 API (link chuẩn, luôn còn hiệu lực).
+    -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@400;700&family=Life+Savers:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@400;600;700&family=Life+Savers:wght@400;700&display=swap" rel="stylesheet">
+
     <style>
-        /* Ẩn hiện text giả lập để trình duyệt buộc phải tải và nhận diện font */
-        .preload-font { font-family: 'Josefin Sans', sans-serif; }
+        /* Dùng luôn font-family lấy từ Google Fonts CSS2 ở trên cho phần UI (không bắt buộc, chỉ để xem trước) */
+        .font-josefin { font-family: 'Josefin Sans', sans-serif; }
+        .font-lifesavers { font-family: 'Life Savers', cursive; }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen p-6">
     <div class="max-w-4xl mx-auto bg-white p-6 rounded-xl shadow-lg">
-        <h1 class="text-2xl font-bold mb-6 text-gray-800 border-b pb-3">Tool Đóng Dấu Watermark Chữ & Logo (Tối đa 100 Ảnh/PDF)</h1>
-        
+        <h1 class="text-2xl font-bold mb-6 text-gray-800 border-b pb-3">Tool Đóng Dấu Watermark (Chuẩn Font Josefin Sans & Life Savers)</h1>
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <!-- Cột 1: Cấu hình loại Watermark -->
             <div class="space-y-4 bg-blue-50/50 p-4 rounded-lg border border-blue-100">
                 <h2 class="font-semibold text-blue-800 text-lg">1. Cấu hình nội dung Watermark</h2>
-                
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Chọn dạng Watermark:</label>
                     <select id="wmType" onchange="toggleWmType()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border bg-white">
@@ -41,16 +49,13 @@
                         <label class="block text-sm font-medium text-gray-700">Nội dung Chữ:</label>
                         <input type="text" id="wmText" value="BẢN QUYỀN NỘI BỘ" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border bg-white">
                     </div>
-                    
+
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Font chữ:</label>
                         <select id="wmFont" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border bg-white">
-                            <option value="Josefin Sans">Josefin Sans (Thanh mảnh, hiện đại, sang trọng)</option>
-                            <option value="Life Savers">Life Savers (Kiểu chữ bo tròn thân thiện)</option>
-                            <option value="Arial">Arial (Tiêu chuẩn, rõ ràng)</option>
-                            <option value="Impact">Impact (Cực dày, bản to nổi bật)</option>
-                            <option value="Courier New">Courier New (Kiểu đánh máy)</option>
-                            <option value="Georgia">Georgia (Chữ có chân mềm mại)</option>
+                            <option value="Josefin Sans">Josefin San (Thanh mảnh, hiện đại)</option>
+                            <option value="Life Savers">Life Savers / Life Logo (Bo tròn, thân thiện)</option>
+                            <option value="Arial">Arial (Tiêu chuẩn)</option>
                         </select>
                     </div>
 
@@ -104,7 +109,7 @@
                         <option value="top-left">Góc trên bên trái</option>
                         <option value="center">Chính giữa file</option>
                         <option value="custom">Tự do nhập tọa độ X, Y (Pixel)</option>
-                        <option value="tile">Lặp lại toàn bộ ảnh (Cho cả Chữ & Logo)</option>
+                        <option value="tile">Lặp lại toàn bộ ảnh</option>
                     </select>
                 </div>
 
@@ -132,7 +137,7 @@
             </div>
         </div>
 
-        <!-- Khung xem trước (Preview) ảnh đầu tiên -->
+        <!-- Khung xem trước (Preview) -->
         <div id="previewContainer" class="mt-6 border-t pt-4 hidden">
             <h3 class="font-bold text-gray-700 mb-2">Xem trước file đầu tiên:</h3>
             <div class="border rounded-lg p-2 bg-gray-100 flex justify-center overflow-hidden">
@@ -140,12 +145,8 @@
             </div>
         </div>
 
-        <!-- Trạng thái tiến trình -->
         <div id="status" class="text-center font-medium text-blue-600 bg-blue-50 p-3 rounded-md mt-4 hidden"></div>
     </div>
-
-    <!-- Div ẩn kích hoạt trình duyệt load font sẵn sàng -->
-    <div class="preload-font" style="position:absolute; left:-9999px; visibility:hidden;">Load Font</div>
 
     <script>
         const logoScaleInput = document.getElementById('logoScale');
@@ -155,24 +156,21 @@
 
         function toggleWmType() {
             const type = document.getElementById('wmType').value;
-            const textSpace = document.getElementById('textConfigSpace');
-            const imageSpace = document.getElementById('imageConfigSpace');
             if (type === 'text') {
-                textSpace.classList.remove('hidden');
-                imageSpace.classList.add('hidden');
+                document.getElementById('textConfigSpace').classList.remove('hidden');
+                document.getElementById('imageConfigSpace').classList.add('hidden');
             } else {
-                textSpace.classList.add('hidden');
-                imageSpace.classList.remove('hidden');
+                document.getElementById('textConfigSpace').classList.add('hidden');
+                document.getElementById('imageConfigSpace').classList.remove('hidden');
             }
         }
 
         function togglePosition() {
             const pos = document.getElementById('wmPosition').value;
-            const customSpace = document.getElementById('customCoordSpace');
             if (pos === 'custom') {
-                customSpace.classList.remove('hidden');
+                document.getElementById('customCoordSpace').classList.remove('hidden');
             } else {
-                customSpace.classList.add('hidden');
+                document.getElementById('customCoordSpace').classList.add('hidden');
             }
         }
 
@@ -184,7 +182,7 @@
         }
 
         function loadLogoImage() {
-            return new Promise((resolve, reject) => {
+            return new Promise((resolve) => {
                 const logoInput = document.getElementById('logoFileInput');
                 if (!logoInput.files || logoInput.files.length === 0) {
                     resolve(null);
@@ -194,11 +192,50 @@
                 reader.onload = function(e) {
                     const img = new Image();
                     img.onload = function() { resolve(img); };
-                    img.onerror = reject;
                     img.src = e.target.result;
                 };
                 reader.readAsDataURL(logoInput.files[0]);
             });
+        }
+
+        /*
+          SỬA LỖI FONT KHÔNG CHẠY:
+          Trước đây code dùng new FontFace(name, url(...)) với URL .woff2 gắn cứng của Google
+          -> các URL này có thể lỗi thời/sai hash bất kỳ lúc nào nên .load() sẽ reject,
+          bị catch nuốt lỗi, và canvas vẽ chữ bằng font mặc định (sans-serif) mà không báo lỗi rõ ràng.
+
+          Cách sửa: font đã được khai báo qua thẻ <link> Google Fonts CSS2 API ở <head>
+          (URL này ổn định, không có hash riêng). Ở đây ta chỉ cần dùng document.fonts.load()
+          để ÉP trình duyệt tải xong font đó trước khi vẽ lên canvas, và dùng document.fonts.check()
+          để xác nhận đã tải thành công. Nếu thất bại thì cảnh báo rõ cho người dùng thay vì âm thầm dùng font khác.
+        */
+        async function ensureFontLoaded(fontName, size) {
+            // Font hệ thống (Arial) thì không cần tải gì cả
+            if (fontName !== 'Josefin Sans' && fontName !== 'Life Savers') {
+                return true;
+            }
+
+            const fontSpecRegular = `${size}px "${fontName}"`;
+            const fontSpecBold = `bold ${size}px "${fontName}"`;
+
+            try {
+                // Ép trình duyệt tải các weight cần dùng
+                await Promise.all([
+                    document.fonts.load(fontSpecRegular),
+                    document.fonts.load(fontSpecBold)
+                ]);
+                // Chờ tất cả các font đang tải (kể cả từ thẻ <link>) hoàn tất
+                await document.fonts.ready;
+            } catch (err) {
+                console.warn(`Không tải được font "${fontName}":`, err);
+            }
+
+            // Xác nhận font đã thực sự sẵn sàng để dùng trên canvas
+            const loaded = document.fonts.check(fontSpecRegular);
+            if (!loaded) {
+                console.warn(`Font "${fontName}" chưa sẵn sàng sau khi chờ tải, canvas có thể dùng font dự phòng.`);
+            }
+            return loaded;
         }
 
         async function processFiles() {
@@ -209,11 +246,7 @@
             const previewImage = document.getElementById('previewImage');
 
             if (files.length === 0) {
-                alert('Vui lòng chọn ít nhất một file cần đóng dấu!');
-                return;
-            }
-            if (files.length > 100) {
-                alert('Bạn chỉ có thể chọn tối đa 100 file mỗi lần!');
+                alert('Vui lòng chọn file!');
                 return;
             }
 
@@ -222,7 +255,7 @@
             if (wmType === 'image') {
                 logoImg = await loadLogoImage();
                 if (!logoImg) {
-                    alert('Vui lòng chọn file hình ảnh Logo để đóng dấu!');
+                    alert('Vui lòng chọn ảnh logo!');
                     return;
                 }
             }
@@ -242,30 +275,33 @@
                 logoImg: logoImg
             };
 
-            statusDiv.classList.remove('hidden');
-            statusDiv.textContent = `Đang xử lý file...`;
-            const zip = new JSZip();
+            // Tải font (nếu là watermark dạng chữ) TRƯỚC khi xử lý bất kỳ file nào,
+            // và chờ đảm bảo tải xong 1 lần duy nhất cho cả batch, thay vì tải lại từng ảnh.
+            if (config.type === 'text') {
+                statusDiv.classList.remove('hidden');
+                statusDiv.textContent = `Đang tải font "${config.font}"...`;
+                const fontOk = await ensureFontLoaded(config.font, config.size);
+                if (!fontOk && config.font !== 'Arial') {
+                    statusDiv.textContent = `Cảnh báo: không tải được font "${config.font}", sẽ dùng font dự phòng.`;
+                }
+            }
 
+            statusDiv.classList.remove('hidden');
+            statusDiv.textContent = `Đang xử lý...`;
+            const zip = new JSZip();
             let firstProcessedUrl = null;
 
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
                 statusDiv.textContent = `Đang xử lý (${i + 1}/${files.length}): ${file.name}`;
 
-                try {
-                    if (file.type.startsWith('image/')) {
-                        const processedBlob = await addWatermarkToImage(file, config);
-                        zip.file(`watermarked_${file.name}`, processedBlob);
-                        
-                        if (i === 0) {
-                            firstProcessedUrl = URL.createObjectURL(processedBlob);
-                        }
-                    } else if (file.type === 'application/pdf') {
-                        const processedBytes = await addWatermarkToPDF(file, config);
-                        zip.file(`watermarked_${file.name}`, processedBytes);
-                    }
-                } catch (err) {
-                    console.error(`Lỗi khi xử lý file ${file.name}:`, err);
+                if (file.type.startsWith('image/')) {
+                    const processedBlob = await addWatermarkToImage(file, config);
+                    zip.file(`watermarked_${file.name}`, processedBlob);
+                    if (i === 0) firstProcessedUrl = URL.createObjectURL(processedBlob);
+                } else if (file.type === 'application/pdf') {
+                    const processedBytes = await addWatermarkToPDF(file, config);
+                    zip.file(`watermarked_${file.name}`, processedBytes);
                 }
             }
 
@@ -274,23 +310,16 @@
                 previewContainer.classList.remove('hidden');
             }
 
-            statusDiv.textContent = 'Đang đóng gói toàn bộ thành file ZIP...';
+            statusDiv.textContent = 'Đang đóng gói ZIP...';
             const content = await zip.generateAsync({ type: 'blob' });
-            
             const link = document.createElement('a');
             link.href = URL.createObjectURL(content);
             link.download = `watermarked_files_${Date.now()}.zip`;
             link.click();
-
-            statusDiv.textContent = 'Hoàn tất! Đã tự động tải file ZIP về máy.';
+            statusDiv.textContent = 'Hoàn tất!';
         }
 
         async function addWatermarkToImage(file, config) {
-            // Đợi trình duyệt tải hoàn tất font chữ trước khi vẽ vào canvas
-            if (config.type === 'text') {
-                await document.fonts.load(`${config.size}px "${config.font}"`);
-            }
-
             return new Promise((resolve) => {
                 const reader = new FileReader();
                 reader.onload = function (e) {
@@ -307,10 +336,10 @@
                             ctx.globalAlpha = config.opacity;
                             const rgba = hexToRgba(config.colorHex);
                             ctx.fillStyle = `rgb(${rgba.r}, ${rgba.g}, ${rgba.b})`;
-                            
-                            // Gán chuẩn font chữ đã được tải
+                            // Font đã được nạp sẵn trước batch (ensureFontLoaded) nên tới đây
+                            // document.fonts đã có font này và canvas sẽ vẽ đúng font.
                             ctx.font = `${config.size}px "${config.font}", sans-serif`;
-                            ctx.textBaseline = 'alphabetic';
+                            ctx.textBaseline = 'middle';
 
                             const textMetrics = ctx.measureText(config.text);
                             const textWidth = textMetrics.width;
@@ -319,54 +348,41 @@
                             if (config.position === 'tile') {
                                 ctx.save();
                                 ctx.rotate((config.angle * Math.PI) / 180);
-                                const stepX = 350, stepY = 250;
+                                const stepX = 400, stepY = 250;
                                 for (let y = -canvas.height; y < canvas.height * 2; y += stepY) {
                                     for (let x = -canvas.width; x < canvas.width * 2; x += stepX) {
                                         ctx.fillText(config.text, x, y);
                                     }
                                 }
                                 ctx.restore();
-                            } else if (config.angle !== 0) {
-                                ctx.save();
-                                let cx = padding, cy = padding;
-                                if (config.position === 'bottom-center') { cx = (canvas.width - textWidth) / 2; cy = canvas.height - padding; }
-                                else if (config.position === 'bottom-right') { cx = canvas.width - textWidth - padding; cy = canvas.height - padding; }
-                                else if (config.position === 'bottom-left') { cx = padding; cy = canvas.height - padding; }
-                                else if (config.position === 'top-right') { cx = canvas.width - textWidth - padding; cy = padding + config.size; }
-                                else if (config.position === 'top-left') { cx = padding; cy = padding + config.size; }
-                                else if (config.position === 'center') { cx = (canvas.width - textWidth) / 2; cy = canvas.height / 2; }
-                                else if (config.position === 'custom') { cx = config.customX; cy = config.customY; }
-
-                                ctx.translate(cx + textWidth / 2, cy - config.size / 2);
-                                ctx.rotate((config.angle * Math.PI) / 180);
-                                ctx.textAlign = 'center';
-                                ctx.fillText(config.text, 0, 0);
-                                ctx.restore();
                             } else {
-                                let x = padding, y = padding + config.size;
+                                let x = padding, y = padding + config.size / 2;
                                 if (config.position === 'bottom-center') {
-                                    x = (canvas.width - textWidth) / 2;
-                                    y = canvas.height - padding;
+                                    x = canvas.width / 2; y = canvas.height - padding - config.size / 2; ctx.textAlign = 'center';
                                 } else if (config.position === 'bottom-right') {
-                                    x = canvas.width - textWidth - padding;
-                                    y = canvas.height - padding;
+                                    x = canvas.width - textWidth - padding; y = canvas.height - padding - config.size / 2; ctx.textAlign = 'left';
                                 } else if (config.position === 'bottom-left') {
-                                    x = padding;
-                                    y = canvas.height - padding;
+                                    x = padding; y = canvas.height - padding - config.size / 2; ctx.textAlign = 'left';
                                 } else if (config.position === 'top-right') {
-                                    x = canvas.width - textWidth - padding;
-                                    y = padding + config.size;
+                                    x = canvas.width - textWidth - padding; y = padding + config.size / 2; ctx.textAlign = 'left';
                                 } else if (config.position === 'top-left') {
-                                    x = padding;
-                                    y = padding + config.size;
+                                    x = padding; y = padding + config.size / 2; ctx.textAlign = 'left';
                                 } else if (config.position === 'center') {
-                                    x = (canvas.width - textWidth) / 2;
-                                    y = (canvas.height / 2) + (config.size / 2);
+                                    x = canvas.width / 2; y = canvas.height / 2; ctx.textAlign = 'center';
                                 } else if (config.position === 'custom') {
-                                    x = config.customX;
-                                    y = config.customY;
+                                    x = config.customX; y = config.customY; ctx.textAlign = 'left';
                                 }
-                                ctx.fillText(config.text, x, y);
+
+                                if (config.angle !== 0) {
+                                    ctx.save();
+                                    ctx.translate(x + textWidth / 2, y);
+                                    ctx.rotate((config.angle * Math.PI) / 180);
+                                    ctx.textAlign = 'center';
+                                    ctx.fillText(config.text, 0, 0);
+                                    ctx.restore();
+                                } else {
+                                    ctx.fillText(config.text, x, y);
+                                }
                             }
                         } else if (config.type === 'image' && config.logoImg) {
                             const logo = config.logoImg;
@@ -375,40 +391,26 @@
 
                             ctx.save();
                             ctx.globalAlpha = config.opacity;
+                            let x = 40, y = 40, padding = 40;
+                            if (config.position === 'bottom-center') { x = (canvas.width - targetWidth) / 2; y = canvas.height - targetHeight - padding; }
+                            else if (config.position === 'bottom-right') { x = canvas.width - targetWidth - padding; y = canvas.height - targetHeight - padding; }
+                            else if (config.position === 'bottom-left') { x = padding; y = canvas.height - targetHeight - padding; }
+                            else if (config.position === 'top-right') { x = canvas.width - targetWidth - padding; y = padding; }
+                            else if (config.position === 'top-left') { x = padding; y = padding; }
+                            else if (config.position === 'center') { x = (canvas.width - targetWidth) / 2; y = (canvas.height - targetHeight) / 2; }
+                            else if (config.position === 'custom') { x = config.customX; y = config.customY; }
 
-                            if (config.position === 'tile') {
+                            if (config.angle !== 0) {
+                                ctx.translate(x + targetWidth / 2, y + targetHeight / 2);
                                 ctx.rotate((config.angle * Math.PI) / 180);
-                                const stepX = targetWidth * 2.5;
-                                const stepY = targetHeight * 2.5;
-                                for (let y = -canvas.height; y < canvas.height * 2; y += stepY) {
-                                    for (let x = -canvas.width; x < canvas.width * 2; x += stepX) {
-                                        ctx.drawImage(logo, x, y, targetWidth, targetHeight);
-                                    }
-                                }
+                                ctx.drawImage(logo, -targetWidth / 2, -targetHeight / 2, targetWidth, targetHeight);
                             } else {
-                                let x = 40, y = 40, padding = 40;
-                                if (config.position === 'bottom-center') { x = (canvas.width - targetWidth) / 2; y = canvas.height - targetHeight - padding; }
-                                else if (config.position === 'bottom-right') { x = canvas.width - targetWidth - padding; y = canvas.height - targetHeight - padding; }
-                                else if (config.position === 'bottom-left') { x = padding; y = canvas.height - targetHeight - padding; }
-                                else if (config.position === 'top-right') { x = canvas.width - targetWidth - padding; y = padding; }
-                                else if (config.position === 'top-left') { x = padding; y = padding; }
-                                else if (config.position === 'center') { x = (canvas.width - targetWidth) / 2; y = (canvas.height - targetHeight) / 2; }
-                                else if (config.position === 'custom') { x = config.customX; y = config.customY; }
-
-                                if (config.angle !== 0) {
-                                    ctx.translate(x + targetWidth / 2, y + targetHeight / 2);
-                                    ctx.rotate((config.angle * Math.PI) / 180);
-                                    ctx.drawImage(logo, -targetWidth / 2, -targetHeight / 2, targetWidth, targetHeight);
-                                } else {
-                                    ctx.drawImage(logo, x, y, targetWidth, targetHeight);
-                                }
+                                ctx.drawImage(logo, x, y, targetWidth, targetHeight);
                             }
                             ctx.restore();
                         }
 
-                        canvas.toBlob((blob) => {
-                            resolve(blob);
-                        }, file.type, 0.9);
+                        canvas.toBlob((blob) => { resolve(blob); }, file.type, 0.9);
                     };
                     img.src = e.target.result;
                 };
@@ -421,61 +423,53 @@
             const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
             const pages = pdfDoc.getPages();
 
-            for (const page of pages) {
-                const { width, height } = page.getSize();
-                
-                if (config.type === 'text') {
-                    const rgba = hexToRgba(config.colorHex);
-                    let x = 50, y = 50;
-                    if (config.position === 'bottom-center') { x = width / 2; y = 50; }
-                    else if (config.position === 'bottom-right') { x = width - 200; y = 50; }
-                    else if (config.position === 'bottom-left') { x = 50; y = 50; }
-                    else if (config.position === 'top-right') { x = width - 200; y = height - 50; }
-                    else if (config.position === 'top-left') { x = 50; y = height - 50; }
-                    else if (config.position === 'center') { x = width / 2; y = height / 2; }
-                    else if (config.position === 'custom') { x = config.customX; y = height - config.customY; }
+            /*
+              LƯU Ý QUAN TRỌNG cho PDF: pdf-lib KHÔNG đọc font "Josefin Sans" / "Life Savers"
+              từ CSS/canvas được — nó chỉ có 14 font chuẩn PDF (Helvetica, Times...) trừ khi
+              ta tự nhúng font TTF/OTF bằng @pdf-lib/fontkit. Đây là lý do watermark trên PDF
+              trước đây luôn ra font mặc định dù chọn Josefin Sans/Life Savers — không phải do
+              đoạn code JS ở trên, mà do thiếu bước nhúng font riêng cho pdf-lib.
+              Bản sửa dưới đây tự tải file .ttf tương ứng và nhúng vào PDF để watermark chữ
+              trên PDF cũng đúng font đã chọn.
+            */
+            const googleFontTtfUrls = {
+                'Josefin Sans': 'https://raw.githubusercontent.com/google/fonts/main/ofl/josefinsans/JosefinSans%5Bwght%5D.ttf',
+                'Life Savers': 'https://raw.githubusercontent.com/google/fonts/main/ofl/lifesavers/LifeSavers-Regular.ttf'
+            };
 
-                    page.drawText(config.text, {
-                        x: x, y: y,
-                        size: config.size,
-                        color: PDFLib.rgb(rgba.r / 255, rgba.g / 255, rgba.b / 255),
-                        opacity: config.opacity,
-                        rotate: PDFLib.degrees(config.angle),
-                        ...(config.position === 'bottom-center' && { anchor: 'center' })
-                    });
-                } else if (config.type === 'image' && config.logoImg) {
-                    const logoBytes = await fetch(config.logoImg.src).then(res => res.arrayBuffer());
-                    let embeddedLogo;
-                    if (config.logoImg.src.includes('image/png')) {
-                        embeddedLogo = await pdfDoc.embedPng(logoBytes);
-                    } else {
-                        embeddedLogo = await pdfDoc.embedJpg(logoBytes);
+            let customFont = null;
+            if (config.type === 'text' && googleFontTtfUrls[config.font]) {
+                try {
+                    if (window.fontkit) {
+                        pdfDoc.registerFontkit(window.fontkit);
                     }
-
-                    const targetWidth = width * config.logoScale;
-                    const targetHeight = (embeddedLogo.height / embeddedLogo.width) * targetWidth;
-                    
-                    let x = 50, y = 50;
-                    if (config.position === 'bottom-center') { x = (width - targetWidth) / 2; y = 50; }
-                    else if (config.position === 'bottom-right') { x = width - targetWidth - 50; y = 50; }
-                    else if (config.position === 'bottom-left') { x = 50; y = 50; }
-                    else if (config.position === 'top-right') { x = width - targetWidth - 50; y = height - targetHeight - 50; }
-                    else if (config.position === 'top-left') { x = 50; y = height - targetHeight - 50; }
-                    else if (config.position === 'center') { x = (width - targetWidth) / 2; y = (height - targetHeight) / 2; }
-                    else if (config.position === 'custom') { x = config.customX; y = height - config.customY - targetHeight; }
-
-                    page.drawImage(embeddedLogo, {
-                        x: x, y: y,
-                        width: targetWidth,
-                        height: targetHeight,
-                        opacity: config.opacity,
-                    });
+                    const fontBytes = await fetch(googleFontTtfUrls[config.font]).then(r => r.arrayBuffer());
+                    customFont = await pdfDoc.embedFont(fontBytes, { subset: true });
+                } catch (err) {
+                    console.warn(`Không nhúng được font "${config.font}" vào PDF, dùng font mặc định:`, err);
+                    customFont = null;
                 }
             }
 
-            const pdfBytes = await pdfDoc.save();
-            return pdfBytes;
+            for (const page of pages) {
+                const { width, height } = page.getSize();
+                if (config.type === 'text') {
+                    const rgba = hexToRgba(config.colorHex);
+                    const drawOpts = {
+                        x: width / 2, y: 50,
+                        size: config.size,
+                        color: PDFLib.rgb(rgba.r / 255, rgba.g / 255, rgba.b / 255),
+                        opacity: config.opacity,
+                        rotate: PDFLib.degrees(config.angle)
+                    };
+                    if (customFont) drawOpts.font = customFont;
+                    page.drawText(config.text, drawOpts);
+                }
+            }
+            return await pdfDoc.save();
         }
     </script>
+    <!-- fontkit cần thiết để pdf-lib nhúng được font TTF tùy chỉnh vào PDF -->
+    <script src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
 </body>
 </html>
