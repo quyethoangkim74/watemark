@@ -9,17 +9,21 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <!-- Thư viện chỉnh sửa PDF trên trình duyệt -->
     <script src="https://unpkg.com/pdf-lib@1.4.0/dist/pdf-lib.min.js"></script>
-    <!-- Nhúng Google Fonts chuẩn xác cho Josefin Sans và Life Savers -->
+    <!-- Nhúng Google Fonts trực tiếp vào trang web -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@400;700&family=Life+Savers:wght@400;700&family=Arial&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@400;700&family=Life+Savers:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* Ẩn hiện text giả lập để trình duyệt buộc phải tải và nhận diện font */
+        .preload-font { font-family: 'Josefin Sans', sans-serif; }
+    </style>
 </head>
 <body class="bg-gray-50 min-h-screen p-6">
     <div class="max-w-4xl mx-auto bg-white p-6 rounded-xl shadow-lg">
         <h1 class="text-2xl font-bold mb-6 text-gray-800 border-b pb-3">Tool Đóng Dấu Watermark Chữ & Logo (Tối đa 100 Ảnh/PDF)</h1>
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <!-- Cột 1: Cấu hình loại Watermark (Chữ hay Logo) -->
+            <!-- Cột 1: Cấu hình loại Watermark -->
             <div class="space-y-4 bg-blue-50/50 p-4 rounded-lg border border-blue-100">
                 <h2 class="font-semibold text-blue-800 text-lg">1. Cấu hình nội dung Watermark</h2>
                 
@@ -34,11 +38,10 @@
                 <!-- Phần cấu hình cho CHỮ -->
                 <div id="textConfigSpace" class="space-y-3">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Nội dung Chữ (Hỗ trợ tiếng Việt có dấu):</label>
+                        <label class="block text-sm font-medium text-gray-700">Nội dung Chữ:</label>
                         <input type="text" id="wmText" value="BẢN QUYỀN NỘI BỘ" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border bg-white">
                     </div>
                     
-                    <!-- Lựa chọn Font chữ -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Font chữ:</label>
                         <select id="wmFont" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border bg-white">
@@ -68,7 +71,6 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Chọn file Ảnh/Logo đóng dấu:</label>
                         <input type="file" id="logoFileInput" accept="image/png, image/jpeg" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 bg-white border rounded-md">
-                        <p class="text-xs text-gray-500 mt-1">Nên dùng file PNG có nền trong suốt (transparent).</p>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Kích thước Logo so với file gốc: <span id="scaleValue" class="font-bold text-blue-600">20%</span></label>
@@ -106,14 +108,13 @@
                     </select>
                 </div>
 
-                <!-- Ô nhập tọa độ tùy chỉnh X, Y (Ẩn mặc định) -->
                 <div id="customCoordSpace" class="grid grid-cols-2 gap-3 bg-amber-50 p-3 rounded-md border border-amber-200 hidden">
                     <div>
-                        <label class="block text-xs font-medium text-amber-800">Tọa độ X (Cách mép trái px):</label>
+                        <label class="block text-xs font-medium text-amber-800">Tọa độ X:</label>
                         <input type="number" id="customX" value="50" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-1.5 text-sm border bg-white">
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-amber-800">Tọa độ Y (Cách mép trên px):</label>
+                        <label class="block text-xs font-medium text-amber-800">Tọa độ Y:</label>
                         <input type="number" id="customY" value="50" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-1.5 text-sm border bg-white">
                     </div>
                 </div>
@@ -131,9 +132,20 @@
             </div>
         </div>
 
+        <!-- Khung xem trước (Preview) ảnh đầu tiên -->
+        <div id="previewContainer" class="mt-6 border-t pt-4 hidden">
+            <h3 class="font-bold text-gray-700 mb-2">Xem trước file đầu tiên:</h3>
+            <div class="border rounded-lg p-2 bg-gray-100 flex justify-center overflow-hidden">
+                <img id="previewImage" class="max-h-96 object-contain rounded shadow" alt="Preview">
+            </div>
+        </div>
+
         <!-- Trạng thái tiến trình -->
-        <div id="status" class="text-center font-medium text-blue-600 bg-blue-50 p-3 rounded-md hidden"></div>
+        <div id="status" class="text-center font-medium text-blue-600 bg-blue-50 p-3 rounded-md mt-4 hidden"></div>
     </div>
+
+    <!-- Div ẩn kích hoạt trình duyệt load font sẵn sàng -->
+    <div class="preload-font" style="position:absolute; left:-9999px; visibility:hidden;">Load Font</div>
 
     <script>
         const logoScaleInput = document.getElementById('logoScale');
@@ -193,6 +205,8 @@
             const fileInput = document.getElementById('fileInput');
             const files = fileInput.files;
             const statusDiv = document.getElementById('status');
+            const previewContainer = document.getElementById('previewContainer');
+            const previewImage = document.getElementById('previewImage');
 
             if (files.length === 0) {
                 alert('Vui lòng chọn ít nhất một file cần đóng dấu!');
@@ -229,8 +243,10 @@
             };
 
             statusDiv.classList.remove('hidden');
-            statusDiv.textContent = `Đang chuẩn bị xử lý 0/${files.length} file...`;
+            statusDiv.textContent = `Đang xử lý file...`;
             const zip = new JSZip();
+
+            let firstProcessedUrl = null;
 
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
@@ -240,6 +256,10 @@
                     if (file.type.startsWith('image/')) {
                         const processedBlob = await addWatermarkToImage(file, config);
                         zip.file(`watermarked_${file.name}`, processedBlob);
+                        
+                        if (i === 0) {
+                            firstProcessedUrl = URL.createObjectURL(processedBlob);
+                        }
                     } else if (file.type === 'application/pdf') {
                         const processedBytes = await addWatermarkToPDF(file, config);
                         zip.file(`watermarked_${file.name}`, processedBytes);
@@ -247,6 +267,11 @@
                 } catch (err) {
                     console.error(`Lỗi khi xử lý file ${file.name}:`, err);
                 }
+            }
+
+            if (firstProcessedUrl) {
+                previewImage.src = firstProcessedUrl;
+                previewContainer.classList.remove('hidden');
             }
 
             statusDiv.textContent = 'Đang đóng gói toàn bộ thành file ZIP...';
@@ -260,27 +285,10 @@
             statusDiv.textContent = 'Hoàn tất! Đã tự động tải file ZIP về máy.';
         }
 
-        // Tải trước Google Font qua FontFace API để Canvas bắt chuẩn nét chữ
-        async function loadCustomFontForCanvas(fontName) {
-            const fontUrls = {
-                'Josefin Sans': 'https://fonts.gstatic.com/s/josefinsans/v32/Qw3PZQNVED7rKGKvnMQTjvqeehkuPlT7DdaVzHv0Bv8.woff2',
-                'Life Savers': 'https://fonts.gstatic.com/s/lifesavers/v17/kXEAonoxVIZtZ0uD3XQh3j8t8g.woff2'
-            };
-
-            if (fontUrls[fontName]) {
-                try {
-                    const fontFace = new FontFace(fontName, `url(${fontUrls[fontName]})`);
-                    await fontFace.load();
-                    document.fonts.add(fontFace);
-                } catch (e) {
-                    console.log("Không tải được font qua mạng, sử dụng font mặc định.");
-                }
-            }
-        }
-
         async function addWatermarkToImage(file, config) {
+            // Đợi trình duyệt tải hoàn tất font chữ trước khi vẽ vào canvas
             if (config.type === 'text') {
-                await loadCustomFontForCanvas(config.font);
+                await document.fonts.load(`${config.size}px "${config.font}"`);
             }
 
             return new Promise((resolve) => {
@@ -299,7 +307,10 @@
                             ctx.globalAlpha = config.opacity;
                             const rgba = hexToRgba(config.colorHex);
                             ctx.fillStyle = `rgb(${rgba.r}, ${rgba.g}, ${rgba.b})`;
+                            
+                            // Gán chuẩn font chữ đã được tải
                             ctx.font = `${config.size}px "${config.font}", sans-serif`;
+                            ctx.textBaseline = 'alphabetic';
 
                             const textMetrics = ctx.measureText(config.text);
                             const textWidth = textMetrics.width;
@@ -329,7 +340,6 @@
                                 ctx.translate(cx + textWidth / 2, cy - config.size / 2);
                                 ctx.rotate((config.angle * Math.PI) / 180);
                                 ctx.textAlign = 'center';
-                                ctx.textBaseline = 'middle';
                                 ctx.fillText(config.text, 0, 0);
                                 ctx.restore();
                             } else {
