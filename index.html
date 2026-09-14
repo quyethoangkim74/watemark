@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Tool Đóng Dấu Watermark Chữ & Logo Hàng Loạt</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Thư viện nén file Zip -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- Thư viện chỉnh sửa PDF trên trình duyệt -->
+    <script src="https://unpkg.com/pdf-lib@1.4.0/dist/pdf-lib.min.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen p-6">
+    <div class="max-w-4xl mx-auto bg-white p-6 rounded-xl shadow-lg">
+        <h1 class="text-2xl font-bold mb-6 text-gray-800 border-b pb-3">Tool Đóng Dấu Watermark Chữ & Logo (Tối đa 100 Ảnh/PDF)</h1>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <!-- Cột 1: Cấu hình loại Watermark (Chữ hay Logo) -->
+            <div class="space-y-4 bg-blue-50/50 p-4 rounded-lg border border-blue-100">
+                <h2 class="font-semibold text-blue-800 text-lg">1. Cấu hình nội dung Watermark</h2>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Chọn dạng Watermark:</label>
+                    <select id="wmType" onchange="toggleWmType()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border bg-white">
+                        <option value="text">Dạng Chữ (Text)</option>
+                        <option value="image">Dạng Ảnh / Logo riêng (PNG/JPG)</option>
+                    </select>
+                </div>
+
+                <!-- Phần cấu hình cho CHỮ -->
+                <div id="textConfigSpace" class="space-y-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Nội dung Chữ (Hỗ trợ tiếng Việt có dấu):</label>
+                        <input type="text" id="wmText" value="BẢN QUYỀN NỘI BỘ" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border bg-white">
+                    </div>
+                    
+                    <!-- Lựa chọn Font chữ -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Font chữ:</label>
+                        <select id="wmFont" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border bg-white">
+                            <option value="Josefin Sans">Josefin Sans (Thanh mảnh, hiện đại, sang trọng)</option>
+                            <option value="Life Logo">Life Logo (Font ký hiệu/biểu tượng độc đáo)</option>
+                            <option value="Arial">Arial (Phổ biến, rõ ràng)</option>
+                            <option value="Roboto">Roboto (Chuẩn web hiện đại)</option>
+                            <option value="Open Sans">Open Sans (Thoáng, dễ đọc)</option>
+                            <option value="Montserrat">Montserrat (Dày dặn, cao cấp)</option>
+                            <option value="Times New Roman">Times New Roman (Cổ điển, trang trọng)</option>
+                            <option value="Georgia">Georgia (Chữ có chân mềm mại)</option>
+                            <option value="Courier New">Courier New (Kiểu đánh máy)</option>
+                            <option value="Impact">Impact (Cực đậm, nổi bật)</option>
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Cỡ chữ:</label>
+                            <input type="number" id="wmSize" value="30" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Màu chữ:</label>
+                            <input type="color" id="wmColor" value="#ff0000" class="mt-1 block w-full h-10 rounded-md border-gray-300 cursor-pointer bg-white">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Phần cấu hình cho ẢNH / LOGO -->
+                <div id="imageConfigSpace" class="space-y-3 hidden">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Chọn file Ảnh/Logo đóng dấu:</label>
+                        <input type="file" id="logoFileInput" accept="image/png, image/jpeg" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 bg-white border rounded-md">
+                        <p class="text-xs text-gray-500 mt-1">Nên dùng file PNG có nền trong suốt (transparent).</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Kích thước Logo so với file gốc: <span id="scaleValue" class="font-bold text-blue-600">20%</span></label>
+                        <input type="range" id="logoScale" min="5" max="80" value="20" class="w-full accent-blue-600 mt-1">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 pt-2 border-t border-gray-200">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Góc xoay (Độ):</label>
+                        <input type="number" id="wmAngle" value="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border bg-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Độ mờ (Opacity: 0.1 - 1):</label>
+                        <input type="number" step="0.1" min="0.1" max="1" id="wmOpacity" value="0.6" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border bg-white">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cột 2: Vị trí & Chọn file nguồn -->
+            <div class="space-y-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <h2 class="font-semibold text-gray-800 text-lg">2. Vị trí & Chọn file cần đóng dấu</h2>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Vị trí đặt Watermark:</label>
+                    <select id="wmPosition" onchange="togglePosition()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border bg-white">
+                        <option value="bottom-center">Chính giữa bên dưới</option>
+                        <option value="bottom-right">Góc dưới bên phải</option>
+                        <option value="bottom-left">Góc dưới bên trái</option>
+                        <option value="top-right">Góc trên bên phải</option>
+                        <option value="top-left">Góc trên bên trái</option>
+                        <option value="center">Chính giữa file</option>
+                        <option value="custom">Tự do nhập tọa độ X, Y (Pixel)</option>
+                        <option value="tile">Lặp lại toàn bộ ảnh (Cho cả Chữ & Logo)</option>
+                    </select>
+                </div>
+
+                <!-- Ô nhập tọa độ tùy chỉnh X, Y (Ẩn mặc định) -->
+                <div id="customCoordSpace" class="grid grid-cols-2 gap-3 bg-amber-50 p-3 rounded-md border border-amber-200 hidden">
+                    <div>
+                        <label class="block text-xs font-medium text-amber-800">Tọa độ X (Cách mép trái px):</label>
+                        <input type="number" id="customX" value="50" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-1.5 text-sm border bg-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-amber-800">Tọa độ Y (Cách mép trên px):</label>
+                        <input type="number" id="customY" value="50" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-1.5 text-sm border bg-white">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Chọn tối đa 100 file (Ảnh hoặc PDF):</label>
+                    <input type="file" id="fileInput" multiple accept="image/png, image/jpeg, application/pdf" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 bg-white border rounded-md">
+                </div>
+
+                <div class="pt-2">
+                    <button onclick="processFiles()" id="processBtn" class="w-full bg-blue-600 text-white py-3 px-4 rounded-md font-semibold hover:bg-blue-700 transition shadow-md flex items-center justify-center gap-2">
+                        <span>Bắt đầu đóng dấu & Tải về (.zip)</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trạng thái tiến trình -->
+        <div id="status" class="text-center font-medium text-blue-600 bg-blue-50 p-3 rounded-md hidden"></div>
+    </div>
+
+    <script>
+        const logoScaleInput = document.getElementById('logoScale');
+        logoScaleInput.addEventListener('input', (e) => {
+            document.getElementById('scaleValue').textContent = e.target.value + '%';
+        });
+
+        function toggleWmType() {
+            const type = document.getElementById('wmType').value;
+            const textSpace = document.getElementById('textConfigSpace');
+            const imageSpace = document.getElementById('imageConfigSpace');
+            if (type === 'text') {
+                textSpace.classList.remove('hidden');
+                imageSpace.classList.add('hidden');
+            } else {
+                textSpace.classList.add('hidden');
+                imageSpace.classList.remove('hidden');
+            }
+        }
+
+        function togglePosition() {
+            const pos = document.getElementById('wmPosition').value;
+            const customSpace = document.getElementById('customCoordSpace');
+            if (pos === 'custom') {
+                customSpace.classList.remove('hidden');
+            } else {
+                customSpace.classList.add('hidden');
+            }
+        }
+
+        function hexToRgba(hex) {
+            let c = hex.replace('#', '');
+            if (c.length === 3) c = c.split('').map(x => x + x).join('');
+            const num = parseInt(c, 16);
+            return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
+        }
+
+        function loadLogoImage() {
+            return new Promise((resolve, reject) => {
+                const logoInput = document.getElementById('logoFileInput');
+                if (!logoInput.files || logoInput.files.length === 0) {
+                    resolve(null);
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() { resolve(img); };
+                    img.onerror = reject;
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(logoInput.files[0]);
+            });
+        }
+
+        async function processFiles() {
+            const fileInput = document.getElementById('fileInput');
+            const files = fileInput.files;
+            const statusDiv = document.getElementById('status');
+
+            if (files.length === 0) {
+                alert('Vui lòng chọn ít nhất một file cần đóng dấu!');
+                return;
+            }
+            if (files.length > 100) {
+                alert('Bạn chỉ có thể chọn tối đa 100 file mỗi lần!');
+                return;
+            }
+
+            const wmType = document.getElementById('wmType').value;
+            let logoImg = null;
+            if (wmType === 'image') {
+                logoImg = await loadLogoImage();
+                if (!logoImg) {
+                    alert('Vui lòng chọn file hình ảnh Logo để đóng dấu!');
+                    return;
+                }
+            }
+
+            const config = {
+                type: wmType,
+                text: document.getElementById('wmText').value,
+                font: document.getElementById('wmFont').value,
+                size: parseFloat(document.getElementById('wmSize').value) || 30,
+                colorHex: document.getElementById('wmColor').value,
+                angle: parseFloat(document.getElementById('wmAngle').value) || 0,
+                opacity: parseFloat(document.getElementById('wmOpacity').value) || 0.6,
+                position: document.getElementById('wmPosition').value,
+                customX: parseFloat(document.getElementById('customX').value) || 0,
+                customY: parseFloat(document.getElementById('customY').value) || 0,
+                logoScale: parseFloat(document.getElementById('logoScale').value) / 100,
+                logoImg: logoImg
+            };
+
+            statusDiv.classList.remove('hidden');
+            statusDiv.textContent = `Đang chuẩn bị xử lý 0/${files.length} file...`;
+            const zip = new JSZip();
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                statusDiv.textContent = `Đang xử lý (${i + 1}/${files.length}): ${file.name}`;
+
+                try {
+                    if (file.type.startsWith('image/')) {
+                        const processedBlob = await addWatermarkToImage(file, config);
+                        zip.file(`watermarked_${file.name}`, processedBlob);
+                    } else if (file.type === 'application/pdf') {
+                        const processedBytes = await addWatermarkToPDF(file, config);
+                        zip.file(`watermarked_${file.name}`, processedBytes);
+                    }
+                } catch (err) {
+                    console.error(`Lỗi khi xử lý file ${file.name}:`, err);
+                }
+            }
+
+            statusDiv.textContent = 'Đang đóng gói toàn bộ thành file ZIP...';
+            const content = await zip.generateAsync({ type: 'blob' });
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(content);
+            link.download = `watermarked_files_${Date.now()}.zip`;
+            link.click();
+
+            statusDiv.textContent = 'Hoàn tất! Đã tự động tải file ZIP về máy.';
+        }
+
+        function getCoordinates(position, canvasWidth, canvasHeight, objWidth, objHeight, padding, customX, customY) {
+            let x = padding, y = padding;
+            if (position === 'bottom-center') {
+                x = (canvasWidth - objWidth) / 2;
+                y = canvasHeight - objHeight - padding;
+            } else if (position === 'bottom-right') {
+                x = canvasWidth - objWidth - padding;
+                y = canvasHeight - objHeight - padding;
+            } else if (position === 'bottom-left') {
+                x = padding;
+                y = canvasHeight - objHeight - padding;
+            } else if (position === 'top-right') {
+                x = canvasWidth - objWidth - padding;
+                y = padding;
+            } else if (position === 'top-left') {
+                x = padding;
+                y = padding;
+            } else if (position === 'center') {
+                x = (canvasWidth - objWidth) / 2;
+                y = (canvasHeight - objHeight) / 2;
+            } else if (position === 'custom') {
+                x = customX;
+                y = customY;
+            }
+            return { x, y };
+        }
+
+        function addWatermarkToImage(file, config) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const img = new Image();
+                    img.onload = function () {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        const ctx = canvas.getContext('2d');
+
+                        ctx.drawImage(img, 0, 0);
+
+                        if (config.type === 'text') {
+                            ctx.globalAlpha = config.opacity;
+                            const rgba = hexToRgba(config.colorHex);
+                            ctx.fillStyle = `rgb(${rgba.r}, ${rgba.g}, ${rgba.b})`;
+                            ctx.font = `bold ${config.size}px "${config.font}", sans-serif`;
+
+                            if (config.position === 'tile') {
+                                ctx.save();
+                                ctx.rotate((config.angle * Math.PI) / 180);
+                                const stepX = 350, stepY = 250;
+                                for (let y = -canvas.height; y < canvas.height * 2; y += stepY) {
+                                    for (let x = -canvas.width; x < canvas.width * 2; x += stepX) {
+                                        ctx.fillText(config.text, x, y);
+                                    }
+                                }
+                                ctx.restore();
+                            } else {
+                                ctx.save();
+                                const textMetrics = ctx.measureText(config.text);
+                                const textWidth = textMetrics.width;
+                                const textHeight = config.size;
+
+                                let pos = getCoordinates(config.position, canvas.width, canvas.height, textWidth, textHeight, 40, config.customX, config.customY);
+                                
+                                if (config.position === 'center') {
+                                    ctx.translate(canvas.width / 2, canvas.height / 2);
+                                    ctx.rotate((config.angle * Math.PI) / 180);
+                                    ctx.textAlign = 'center'; 
+                                    ctx.textBaseline = 'middle';
+                                    ctx.fillText(config.text, 0, 0);
+                                } else if (config.position === 'bottom-center') {
+                                    ctx.translate(pos.x + textWidth / 2, pos.y + textHeight / 2);
+                                    ctx.rotate((config.angle * Math.PI) / 180);
+                                    ctx.textAlign = 'center'; 
+                                    ctx.textBaseline = 'middle';
+                                    ctx.fillText(config.text, 0, 0);
+                                } else {
+                                    ctx.translate(pos.x, pos.y + textHeight);
+                                    ctx.rotate((config.angle * Math.PI) / 180);
+                                    ctx.fillText(config.text, 0, 0);
+                                }
+                                ctx.restore();
+                            }
+                        } else if (config.type === 'image' && config.logoImg) {
+                            const logo = config.logoImg;
+                            const targetWidth = canvas.width * config.logoScale;
+                            const targetHeight = (logo.height / logo.width) * targetWidth;
+
+                            ctx.save();
+                            ctx.globalAlpha = config.opacity;
+
+                            if (config.position === 'tile') {
+                                ctx.rotate((config.angle * Math.PI) / 180);
+                                const stepX = targetWidth * 2.5;
+                                const stepY = targetHeight * 2.5;
+                                for (let y = -canvas.height; y < canvas.height * 2; y += stepY) {
+                                    for (let x = -canvas.width; x < canvas.width * 2; x += stepX) {
+                                        ctx.drawImage(logo, x, y, targetWidth, targetHeight);
+                                    }
+                                }
+                            } else {
+                                let pos = getCoordinates(config.position, canvas.width, canvas.height, targetWidth, targetHeight, 40, config.customX, config.customY);
+
+                                if (config.angle !== 0) {
+                                    ctx.translate(pos.x + targetWidth / 2, pos.y + targetHeight / 2);
+                                    ctx.rotate((config.angle * Math.PI) / 180);
+                                    ctx.drawImage(logo, -targetWidth / 2, -targetHeight / 2, targetWidth, targetHeight);
+                                } else {
+                                    ctx.drawImage(logo, pos.x, pos.y, targetWidth, targetHeight);
+                                }
+                            }
+                            ctx.restore();
+                        }
+
+                        canvas.toBlob((blob) => {
+                            resolve(blob);
+                        }, file.type, 0.9);
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function addWatermarkToPDF(file, config) {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+            const pages = pdfDoc.getPages();
+
+            for (const page of pages) {
+                const { width, height } = page.getSize();
+                
+                if (config.type === 'text') {
+                    const rgba = hexToRgba(config.colorHex);
+                    let x = 50, y = 50;
+                    if (config.position === 'bottom-center') { x = width / 2; y = 50; }
+                    else if (config.position === 'bottom-right') { x = width - 200; y = 50; }
+                    else if (config.position === 'bottom-left') { x = 50; y = 50; }
+                    else if (config.position === 'top-right') { x = width - 200; y = height - 50; }
+                    else if (config.position === 'top-left') { x = 50; y = height - 50; }
+                    else if (config.position === 'center') { x = width / 2; y = height / 2; }
+                    else if (config.position === 'custom') { x = config.customX; y = height - config.customY; }
+
+                    page.drawText(config.text, {
+                        x: x, y: y,
+                        size: config.size,
+                        color: PDFLib.rgb(rgba.r / 255, rgba.g / 255, rgba.b / 255),
+                        opacity: config.opacity,
+                        rotate: PDFLib.degrees(config.angle),
+                        ...(config.position === 'bottom-center' && { anchor: 'center' })
+                    });
+                } else if (config.type === 'image' && config.logoImg) {
+                    const logoBytes = await fetch(config.logoImg.src).then(res => res.arrayBuffer());
+                    let embeddedLogo;
+                    if (config.logoImg.src.includes('image/png')) {
+                        embeddedLogo = await pdfDoc.embedPng(logoBytes);
+                    } else {
+                        embeddedLogo = await pdfDoc.embedJpg(logoBytes);
+                    }
+
+                    const targetWidth = width * config.logoScale;
+                    const targetHeight = (embeddedLogo.height / embeddedLogo.width) * targetWidth;
+                    
+                    let x = 50, y = 50;
+                    if (config.position === 'bottom-center') { x = (width - targetWidth) / 2; y = 50; }
+                    else if (config.position === 'bottom-right') { x = width - targetWidth - 50; y = 50; }
+                    else if (config.position === 'bottom-left') { x = 50; y = 50; }
+                    else if (config.position === 'top-right') { x = width - targetWidth - 50; y = height - targetHeight - 50; }
+                    else if (config.position === 'top-left') { x = 50; y = height - targetHeight - 50; }
+                    else if (config.position === 'center') { x = (width - targetWidth) / 2; y = (height - targetHeight) / 2; }
+                    else if (config.position === 'custom') { x = config.customX; y = height - config.customY - targetHeight; }
+
+                    page.drawImage(embeddedLogo, {
+                        x: x, y: y,
+                        width: targetWidth,
+                        height: targetHeight,
+                        opacity: config.opacity,
+                    });
+                }
+            }
+
+            const pdfBytes = await pdfDoc.save();
+            return pdfBytes;
+        }
+    </script>
+</body>
+</html>
