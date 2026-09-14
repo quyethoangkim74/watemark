@@ -9,32 +9,32 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <!-- Thư viện chỉnh sửa PDF trên trình duyệt -->
     <script src="https://unpkg.com/pdf-lib@1.4.0/dist/pdf-lib.min.js"></script>
-
-    <!--
-      QUAN TRỌNG: không dùng link .woff2 cố định (hotlink) của Google Fonts nữa,
-      vì các URL đó gắn với một "version hash" và Google có thể đổi hash bất cứ lúc nào
-      -> link chết -> font không tải được -> canvas âm thầm rơi về sans-serif.
-      Thay vào đó gọi thẳng Google Fonts CSS2 API (link chuẩn, luôn còn hiệu lực).
-    -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@400;600;700&family=Life+Savers:wght@400;700&display=swap" rel="stylesheet">
-
+    
+    <!-- Khai báo chuẩn @font-face từ Google Fonts -->
     <style>
-        /* Dùng luôn font-family lấy từ Google Fonts CSS2 ở trên cho phần UI (không bắt buộc, chỉ để xem trước) */
-        .font-josefin { font-family: 'Josefin Sans', sans-serif; }
-        .font-lifesavers { font-family: 'Life Savers', cursive; }
+        @font-face {
+            font-family: 'Josefin Sans';
+            src: url('https://fonts.gstatic.com/s/josefinsans/v32/Qw3PZQNVED7rKGKvnMQTjvqeehkuPlT7DdaVzHv0Bv8.woff2') format('woff2');
+            font-weight: 400;
+            font-style: normal;
+        }
+        @font-face {
+            font-family: 'Life Savers';
+            src: url('https://fonts.gstatic.com/s/lifesavers/v17/kXEAonoxVIZtZ0uD3XQh3j8t8g.woff2') format('woff2');
+            font-weight: 400;
+            font-style: normal;
+        }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen p-6">
     <div class="max-w-4xl mx-auto bg-white p-6 rounded-xl shadow-lg">
         <h1 class="text-2xl font-bold mb-6 text-gray-800 border-b pb-3">Tool Đóng Dấu Watermark (Chuẩn Font Josefin Sans & Life Savers)</h1>
-
+        
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <!-- Cột 1: Cấu hình loại Watermark -->
             <div class="space-y-4 bg-blue-50/50 p-4 rounded-lg border border-blue-100">
                 <h2 class="font-semibold text-blue-800 text-lg">1. Cấu hình nội dung Watermark</h2>
-
+                
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Chọn dạng Watermark:</label>
                     <select id="wmType" onchange="toggleWmType()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border bg-white">
@@ -49,7 +49,7 @@
                         <label class="block text-sm font-medium text-gray-700">Nội dung Chữ:</label>
                         <input type="text" id="wmText" value="BẢN QUYỀN NỘI BỘ" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border bg-white">
                     </div>
-
+                    
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Font chữ:</label>
                         <select id="wmFont" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border bg-white">
@@ -198,46 +198,6 @@
             });
         }
 
-        /*
-          SỬA LỖI FONT KHÔNG CHẠY:
-          Trước đây code dùng new FontFace(name, url(...)) với URL .woff2 gắn cứng của Google
-          -> các URL này có thể lỗi thời/sai hash bất kỳ lúc nào nên .load() sẽ reject,
-          bị catch nuốt lỗi, và canvas vẽ chữ bằng font mặc định (sans-serif) mà không báo lỗi rõ ràng.
-
-          Cách sửa: font đã được khai báo qua thẻ <link> Google Fonts CSS2 API ở <head>
-          (URL này ổn định, không có hash riêng). Ở đây ta chỉ cần dùng document.fonts.load()
-          để ÉP trình duyệt tải xong font đó trước khi vẽ lên canvas, và dùng document.fonts.check()
-          để xác nhận đã tải thành công. Nếu thất bại thì cảnh báo rõ cho người dùng thay vì âm thầm dùng font khác.
-        */
-        async function ensureFontLoaded(fontName, size) {
-            // Font hệ thống (Arial) thì không cần tải gì cả
-            if (fontName !== 'Josefin Sans' && fontName !== 'Life Savers') {
-                return true;
-            }
-
-            const fontSpecRegular = `${size}px "${fontName}"`;
-            const fontSpecBold = `bold ${size}px "${fontName}"`;
-
-            try {
-                // Ép trình duyệt tải các weight cần dùng
-                await Promise.all([
-                    document.fonts.load(fontSpecRegular),
-                    document.fonts.load(fontSpecBold)
-                ]);
-                // Chờ tất cả các font đang tải (kể cả từ thẻ <link>) hoàn tất
-                await document.fonts.ready;
-            } catch (err) {
-                console.warn(`Không tải được font "${fontName}":`, err);
-            }
-
-            // Xác nhận font đã thực sự sẵn sàng để dùng trên canvas
-            const loaded = document.fonts.check(fontSpecRegular);
-            if (!loaded) {
-                console.warn(`Font "${fontName}" chưa sẵn sàng sau khi chờ tải, canvas có thể dùng font dự phòng.`);
-            }
-            return loaded;
-        }
-
         async function processFiles() {
             const fileInput = document.getElementById('fileInput');
             const files = fileInput.files;
@@ -275,17 +235,6 @@
                 logoImg: logoImg
             };
 
-            // Tải font (nếu là watermark dạng chữ) TRƯỚC khi xử lý bất kỳ file nào,
-            // và chờ đảm bảo tải xong 1 lần duy nhất cho cả batch, thay vì tải lại từng ảnh.
-            if (config.type === 'text') {
-                statusDiv.classList.remove('hidden');
-                statusDiv.textContent = `Đang tải font "${config.font}"...`;
-                const fontOk = await ensureFontLoaded(config.font, config.size);
-                if (!fontOk && config.font !== 'Arial') {
-                    statusDiv.textContent = `Cảnh báo: không tải được font "${config.font}", sẽ dùng font dự phòng.`;
-                }
-            }
-
             statusDiv.classList.remove('hidden');
             statusDiv.textContent = `Đang xử lý...`;
             const zip = new JSZip();
@@ -319,7 +268,28 @@
             statusDiv.textContent = 'Hoàn tất!';
         }
 
+        // Ép Canvas nhận font bằng FontFace API
+        async function ensureFontLoaded(fontName) {
+            const fontUrls = {
+                'Josefin Sans': 'https://fonts.gstatic.com/s/josefinsans/v32/Qw3PZQNVED7rKGKvnMQTjvqeehkuPlT7DdaVzHv0Bv8.woff2',
+                'Life Savers': 'https://fonts.gstatic.com/s/lifesavers/v17/kXEAonoxVIZtZ0uD3XQh3j8t8g.woff2'
+            };
+            if (fontUrls[fontName]) {
+                try {
+                    const fontFace = new FontFace(fontName, `url(${fontUrls[fontName]})`);
+                    await fontFace.load();
+                    document.fonts.add(fontFace);
+                } catch (e) {
+                    console.log("Không tải được font trực tiếp.");
+                }
+            }
+        }
+
         async function addWatermarkToImage(file, config) {
+            if (config.type === 'text') {
+                await ensureFontLoaded(config.font);
+            }
+
             return new Promise((resolve) => {
                 const reader = new FileReader();
                 reader.onload = function (e) {
@@ -336,8 +306,6 @@
                             ctx.globalAlpha = config.opacity;
                             const rgba = hexToRgba(config.colorHex);
                             ctx.fillStyle = `rgb(${rgba.r}, ${rgba.g}, ${rgba.b})`;
-                            // Font đã được nạp sẵn trước batch (ensureFontLoaded) nên tới đây
-                            // document.fonts đã có font này và canvas sẽ vẽ đúng font.
                             ctx.font = `${config.size}px "${config.font}", sans-serif`;
                             ctx.textBaseline = 'middle';
 
@@ -423,53 +391,22 @@
             const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
             const pages = pdfDoc.getPages();
 
-            /*
-              LƯU Ý QUAN TRỌNG cho PDF: pdf-lib KHÔNG đọc font "Josefin Sans" / "Life Savers"
-              từ CSS/canvas được — nó chỉ có 14 font chuẩn PDF (Helvetica, Times...) trừ khi
-              ta tự nhúng font TTF/OTF bằng @pdf-lib/fontkit. Đây là lý do watermark trên PDF
-              trước đây luôn ra font mặc định dù chọn Josefin Sans/Life Savers — không phải do
-              đoạn code JS ở trên, mà do thiếu bước nhúng font riêng cho pdf-lib.
-              Bản sửa dưới đây tự tải file .ttf tương ứng và nhúng vào PDF để watermark chữ
-              trên PDF cũng đúng font đã chọn.
-            */
-            const googleFontTtfUrls = {
-                'Josefin Sans': 'https://raw.githubusercontent.com/google/fonts/main/ofl/josefinsans/JosefinSans%5Bwght%5D.ttf',
-                'Life Savers': 'https://raw.githubusercontent.com/google/fonts/main/ofl/lifesavers/LifeSavers-Regular.ttf'
-            };
-
-            let customFont = null;
-            if (config.type === 'text' && googleFontTtfUrls[config.font]) {
-                try {
-                    if (window.fontkit) {
-                        pdfDoc.registerFontkit(window.fontkit);
-                    }
-                    const fontBytes = await fetch(googleFontTtfUrls[config.font]).then(r => r.arrayBuffer());
-                    customFont = await pdfDoc.embedFont(fontBytes, { subset: true });
-                } catch (err) {
-                    console.warn(`Không nhúng được font "${config.font}" vào PDF, dùng font mặc định:`, err);
-                    customFont = null;
-                }
-            }
-
             for (const page of pages) {
                 const { width, height } = page.getSize();
                 if (config.type === 'text') {
                     const rgba = hexToRgba(config.colorHex);
-                    const drawOpts = {
+                    page.drawText(config.text, {
                         x: width / 2, y: 50,
                         size: config.size,
                         color: PDFLib.rgb(rgba.r / 255, rgba.g / 255, rgba.b / 255),
                         opacity: config.opacity,
-                        rotate: PDFLib.degrees(config.angle)
-                    };
-                    if (customFont) drawOpts.font = customFont;
-                    page.drawText(config.text, drawOpts);
+                        rotate: PDFLib.degrees(config.angle),
+                        anchor: 'center'
+                    });
                 }
             }
             return await pdfDoc.save();
         }
     </script>
-    <!-- fontkit cần thiết để pdf-lib nhúng được font TTF tùy chỉnh vào PDF -->
-    <script src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
 </body>
 </html>
